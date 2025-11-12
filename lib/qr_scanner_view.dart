@@ -30,7 +30,10 @@ class QrScannerView extends StatelessWidget {
               final List<Barcode> barcodes = capture.barcodes;
               if (barcodes.isNotEmpty) {
                 final String scannedData = barcodes.first.rawValue ?? '';
-                Navigator.pop(context, scannedData);
+                // CRITICAL LINE: Immediately pop the scanner screen
+                if (Navigator.of(context).canPop()) {
+                  Navigator.pop(context, scannedData);
+                }
               }
             },
           ),
@@ -88,7 +91,7 @@ class QrScannerView extends StatelessWidget {
 }
 
 // -------------------------------------------------------------------
-// 💡 ANIMATED WIDGET FOR THE SCAN LINE (Placed in the center of the Stack)
+// 💡 ANIMATED WIDGET FOR THE SCAN LINE
 // -------------------------------------------------------------------
 class _AnimatedScanLine extends StatefulWidget {
   final double size;
@@ -106,14 +109,12 @@ class _AnimatedScanLineState extends State<_AnimatedScanLine> with SingleTickerP
   @override
   void initState() {
     super.initState();
-    // Animation range is from 0 to the size of the box (viewport height)
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2), // Duration for one full cycle
-    )..repeat(reverse: true); // Loop back and forth
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
 
-    // We animate the offset to move the line vertically within the viewport
-    _animation = Tween<double>(begin: 0.0, end: widget.size - 3.0).animate( // -3.0 to keep the 3px line fully inside
+    _animation = Tween<double>(begin: 0.0, end: widget.size - 3.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -129,17 +130,15 @@ class _AnimatedScanLineState extends State<_AnimatedScanLine> with SingleTickerP
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        // Use a SizedBox to define the area of movement, then translate the line.
         return SizedBox(
           width: widget.size,
           height: widget.size,
           child: Stack(
             children: [
-              // Line position goes from top (0) to bottom (widget.size - 3.0)
               Positioned(
                 top: _animation.value,
                 child: Container(
-                  height: 3, // Thickness of the line
+                  height: 3,
                   width: widget.size,
                   decoration: BoxDecoration(
                     color: widget.lineColor,
@@ -163,7 +162,7 @@ class _AnimatedScanLineState extends State<_AnimatedScanLine> with SingleTickerP
 
 
 // -------------------------------------------------------------------
-// 💡 CUSTOM OVERLAY WIDGET (for the transparent cutout and corners)
+// 💡 CUSTOM OVERLAY WIDGET
 // -------------------------------------------------------------------
 
 class _ScannerOverlay extends StatelessWidget {
@@ -221,8 +220,8 @@ class _OverlayPainter extends CustomPainter {
 
     // 2. Draw the transparent dark overlay (The "hole" effect)
     final Path path = Path()
-      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height)) // Full screen
-      ..addRect(scanRect); // Cutout the center rect
+      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..addRect(scanRect);
 
     canvas.drawPath(
       path,

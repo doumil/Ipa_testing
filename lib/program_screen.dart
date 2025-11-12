@@ -462,9 +462,11 @@ class _ProgramScreenState extends State<ProgramScreen> {
     }
 
     String speakerNames = item.speakers.map((s) => s.fullName).join(', ');
-    String subtitle = item.location;
-    if (item.location == 'Not specified' || item.location.isEmpty) {
-      subtitle = "Details non disponibles";
+
+    // 💡 CRITICAL FIX: Normalize the location string to ensure 'Not specified' or empty means truly empty.
+    String location = item.location;
+    if (location.isEmpty || location == 'Not specified' || location == 'Details non disponibles') {
+      location = '';
     }
 
     // Use .toString() when checking membership in the set
@@ -528,7 +530,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
                     ),
                     const SizedBox(height: 4),
 
-                    // 💡 UPDATED: Speaker with Icon
+                    // 💡 Speaker with Icon
                     if (speakerNames.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 4.0),
@@ -552,17 +554,29 @@ class _ProgramScreenState extends State<ProgramScreen> {
                         ),
                       ),
 
-                    // Location (now the main subtitle)
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: theme.blackColor.withOpacity(0.6),
+                    // 💡 LOCATION ROW: Only renders if the 'location' string is NOT empty after normalization.
+                    if (location.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            // Location Icon
+                            Icon(Icons.location_on, size: 16, color: theme.secondaryColor),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                location,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: theme.blackColor.withOpacity(0.6),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
 
                     // Type Tag
                     Chip(

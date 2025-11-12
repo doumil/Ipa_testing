@@ -1,4 +1,5 @@
-// lib/api_services/scanned_user_api_service.dart (Corrected)
+// lib/api_services/scanned_user_api_service.dart
+
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
@@ -29,31 +30,28 @@ class ScannedUserApiService {
             };
           }
 
-          // Return the map using the LOCAL 'userMap' key, which is then used by the screen
+          // ✅ FIX: Return the success result in the expected format
           return {
             'success': true,
-            'userMap': userData, // Renaming to userMap for clarity
-            'message': responseJson['message'],
+            'userMap': userData,
           };
         } else {
-          debugPrint('[API Service] Server reported success: false');
           return {
             'success': false,
-            'message': responseJson['message'] ?? 'Server request failed with unknown reason.'
+            'message': responseJson['message'] ?? 'Failed to retrieve user data.'
           };
         }
       } else {
-        debugPrint('[API Service] HTTP Error Status Code: ${response.statusCode}');
         return {
           'success': false,
-          'message': 'API Request failed with status: ${response.statusCode}',
+          'message': 'API call failed with status code ${response.statusCode}',
         };
       }
     } catch (e) {
-      debugPrint('[API Service] Exception during API call: $e');
+      debugPrint('[API Service] Exception: $e');
       return {
         'success': false,
-        'message': 'Network error or connection failed: $e',
+        'message': 'Network error: $e',
       };
     }
   }

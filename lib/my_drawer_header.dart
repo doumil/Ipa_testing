@@ -91,6 +91,8 @@ class _MyHeaderDrawerState extends State<MyHeaderDrawer> {
 
           // --- User Info and Logout Icon (Centered Single Line) ---
           if (currentUser != null)
+          // Start of Commented Code: Hiding Logout Icon and restructuring user info
+          /*
             Row(
               // 1. Center the Row content (name + icon) horizontally
               mainAxisAlignment: MainAxisAlignment.center,
@@ -112,7 +114,7 @@ class _MyHeaderDrawerState extends State<MyHeaderDrawer> {
                 // Add a small spacer between the text and icon
                 const SizedBox(width: 8),
 
-                // LOGOUT ICON
+                // LOGOUT ICON (HIDDEN)
                 IconButton(
                   icon: Icon(
                     Icons.logout,
@@ -125,6 +127,20 @@ class _MyHeaderDrawerState extends State<MyHeaderDrawer> {
                   tooltip: 'Logout',
                 ),
               ],
+            )
+            */
+          // End of Commented Code
+
+          // Display User Name Only (Centered)
+            Text(
+              currentUser.name ?? '${currentUser.prenom ?? ''} ${currentUser.nom ?? ''}'.trim(),
+              style: TextStyle(
+                color: theme.whiteColor,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center, // Ensure centering
+              overflow: TextOverflow.ellipsis,
             )
           else
             Column( // Guest User Column (remains centered)

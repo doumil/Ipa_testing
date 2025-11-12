@@ -52,6 +52,7 @@ import 'package:emecexpo/scanned_badges_screen.dart';
 import 'ExpoFloorPlan.dart';
 import 'conversations_screen.dart';
 import 'package:emecexpo/meeting_ratings_screen.dart';
+import 'package:emecexpo/model/app_theme_data.dart'; // Required for AlertDialog styling
 
 // Import your providers
 import 'package:emecexpo/providers/theme_provider.dart';
@@ -217,6 +218,63 @@ class _WelcomPageState extends State<WelcomPage> {
   void initState() {
     super.initState();
     _initializeUserAndLoadData();
+  }
+
+  Future<void> _performLogout() async {
+    await prefs.remove('authToken');
+    await prefs.remove('currentUserJson');
+    _loggedInUser = null;
+    notificationCountNotifier.value = 0; // Reset notifications
+
+    // Navigate back to the LoginScreen and remove all routes below it
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+            (Route<dynamic> route) => false,
+      );
+    }
+  }
+
+  // Function to show the confirmation dialog
+  Future<void> _showLogoutConfirmationDialog(BuildContext context, AppThemeData theme) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Are you sure you want to log out of your account?'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: theme.primaryColor),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog
+              },
+            ),
+            TextButton(
+              child: Text(
+                'Logout',
+                style: TextStyle(color: theme.secondaryColor, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog first
+                // EXECUTE THE LOGOUT FUNCTION
+                _performLogout();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _initializeUserAndLoadData() async {
@@ -426,7 +484,8 @@ class _WelcomPageState extends State<WelcomPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    MyHeaderDrawer(user: currentUser, onLogout: () {  },), // Pass the non-nullable user
+                    // 💡 FIX: Pass the _performLogout function to MyHeaderDrawer
+                    MyHeaderDrawer(user: currentUser, onLogout: _performLogout), // Pass the non-nullable user
                     const SizedBox(height: 5.0),
                     Consumer<MenuProvider>(
                       builder: (context, menuProvider, child) {
@@ -439,6 +498,10 @@ class _WelcomPageState extends State<WelcomPage> {
                           menuConfig: menuConfig,
                           onNavigate: _onNavigateToSection,
                           currentSection: currentPage,
+                          // 💡 NEW: Pass the logout callback function and theme data
+                          onLogout: _performLogout,
+                          showLogoutDialog: _showLogoutConfirmationDialog,
+                          appTheme: theme,
                         );
                       },
                     ),
@@ -503,7 +566,11 @@ class _WelcomPageState extends State<WelcomPage> {
     required ThemeProvider theme,
     required MenuConfig menuConfig,
     required OnNavigateCallback onNavigate,
-    required DrawerSections currentSection
+    required DrawerSections currentSection,
+    // 💡 NEW PARAMETERS FOR LOGOUT
+    required VoidCallback onLogout,
+    required Function(BuildContext context, AppThemeData theme) showLogoutDialog,
+    required AppThemeData appTheme,
   }) {
     // ... (MyDrawerList implementation)
     return Container(
@@ -571,6 +638,44 @@ class _WelcomPageState extends State<WelcomPage> {
           //menuItem(DrawerSections.getThere, "How to get there", Icons.directions_bus_outlined, currentSection == DrawerSections.getThere, onNavigate),
           menuItem(DrawerSections.socialM, "Social Media", FontAwesomeIcons.shareNodes, currentSection == DrawerSections.socialM, onNavigate),
           //menuItem(DrawerSections.settings, "Settings", Icons.settings_outlined, currentSection == DrawerSections.settings, onNavigate),
+
+          // 💡 NEW: LOGOUT BUTTON
+          // Use a placeholder section for the logout action, as it doesn't navigate to a content screen.
+          // Using a high number or a custom value that won't conflict with existing sections.
+          // Since it's an action, we call the dialog directly instead of onNavigate
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  showLogoutDialog(context, appTheme);
+                },
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.logout,
+                      size: 24,
+                      color: theme.currentTheme.secondaryColor,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        "Logout",
+                        style: TextStyle(
+                          color: theme.currentTheme.whiteColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // END OF LOGOUT BUTTON
+          const SizedBox(height: 20), // Add some spacing at the bottom
         ],
       ),
     );

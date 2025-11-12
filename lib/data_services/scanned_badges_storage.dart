@@ -2,14 +2,15 @@
 
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../model/scanned_badge_model.dart'; // Import your ScannedBadge model
+// ✅ FIX: Changed import to match the correct model file
+import '../model/user_scanner.dart';
 
 class ScannedBadgesStorage {
   static const String _keyIScanned = 'iScannedBadgesList';
   static const String _keyScannedMe = 'scannedMeBadgesList';
 
   /// Loads the list of badges scanned by the current user.
-  Future<List<ScannedBadge>> loadIScannedBadges() async {
+  Future<List<Userscan>> loadIScannedBadges() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(_keyIScanned);
 
@@ -19,20 +20,20 @@ class ScannedBadgesStorage {
 
     try {
       final List<dynamic> jsonList = json.decode(jsonString);
-      return jsonList.map((json) => ScannedBadge.fromJson(json)).toList();
+      // ✅ FIX: Use Userscan.fromMap (since storage uses map structure)
+      return jsonList.map((json) => Userscan.fromMap(json)).toList();
     } catch (e) {
+      // ignore: avoid_print
       print("Error loading I Scanned Badges from storage: $e");
       return [];
     }
   }
 
   /// Saves the updated list of badges scanned by the current user.
-  Future<void> saveIScannedBadges(List<ScannedBadge> badges) async {
+  Future<void> saveIScannedBadges(List<Userscan> badges) async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonList = badges.map((badge) => badge.toJson()).toList();
+    // ✅ FIX: Use Userscan.toMap for serialization
+    final jsonList = badges.map((badge) => badge.toMap()).toList();
     await prefs.setString(_keyIScanned, json.encode(jsonList));
   }
-
-// NOTE: You would implement loadScannedMeBadges and saveScannedMeBadges
-// similarly if that data were pushed from the server.
 }

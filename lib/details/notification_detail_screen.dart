@@ -14,7 +14,7 @@ class NotificationDetailScreen extends StatelessWidget {
         centerTitle: true, // Center the title
         backgroundColor: const Color(0xff261350),
         leading: IconButton( // Add a back arrow
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios),
           onPressed: () {
             // This pops the NotificationDetailScreen off the navigation stack
             Navigator.pop(context);

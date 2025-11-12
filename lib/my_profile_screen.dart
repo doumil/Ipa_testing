@@ -46,6 +46,48 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
     );
   }
 
+  // 💡 NEW: Function to show the confirmation dialog
+  Future<void> _showLogoutConfirmationDialog(BuildContext context, AppThemeData theme) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // user must tap button!
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text('Are you sure you want to log out of your account?'),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text(
+                'Cancel',
+                style: TextStyle(color: theme.primaryColor),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog
+              },
+            ),
+            TextButton(
+              child: Text(
+                'Logout',
+                style: TextStyle(color: theme.secondaryColor, fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop(); // Dismiss the dialog first
+                // EXECUTE THE LOGOUT FUNCTION
+                _logout();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // --- Helper Widget: Data Card with Icon ---
   Widget _buildInfoCard({
     required AppThemeData theme,
@@ -139,7 +181,10 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: _logout,
+            onPressed: () {
+              // 💡 MODIFIED: Show confirmation dialog instead of logging out directly
+              _showLogoutConfirmationDialog(context, theme);
+            },
             tooltip: 'Logout',
           ),
         ],

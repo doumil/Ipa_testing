@@ -32,26 +32,35 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _validatedEmail = email;
       _currentStep = LoginStep.verifyCode;
+      // Ensure the shared controller has the email when entering Step 2
+      if (_emailController.text != email) {
+        _emailController.text = email;
+      }
     });
   }
 
   void _goToStep3() {
     setState(() {
       _currentStep = LoginStep.forgetPassword;
-      // Clear the email field when entering the forget password flow for a fresh start
-      _emailController.clear();
+      // **[MODIFIED]** Only clear the email field if it was empty,
+      // otherwise keep the email already entered in Step 1/Step 2
+      if (_validatedEmail != null && _emailController.text.isEmpty) {
+        _emailController.text = _validatedEmail!;
+      }
     });
   }
 
   // Refactored to handle returning to step 1 from any other step
   void _goToStep1() {
     setState(() {
-      _validatedEmail = null;
-      _currentStep = LoginStep.enterEmail;
-      // Keep the email field cleared only if coming from forget password flow
-      if (_emailController.text.isNotEmpty && _emailController.text != _validatedEmail) {
+      // Keep the email in the controller if it's already validated
+      if (_validatedEmail != null) {
+        _emailController.text = _validatedEmail!;
+      } else {
         _emailController.clear();
       }
+      _validatedEmail = null;
+      _currentStep = LoginStep.enterEmail;
     });
   }
 
@@ -131,6 +140,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Footer Links
               // 1. Forgot Password Link (Goes to Step 3)
+              // The user requested to hide this link by commenting it out.
+              /*
               TextButton(
                 onPressed: _goToStep3,
                 child: Text(
@@ -138,6 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(color: Provider.of<ThemeProvider>(context).currentTheme.secondaryColor),
                 ),
               ),
+              */
 
               // 2. Register Link
               TextButton(
@@ -499,7 +511,7 @@ class _LoginStep2State extends State<LoginStep2> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               // Back button to return to Step 1
-/*              IconButton(
+              /* IconButton(
                 icon: Icon(Icons.arrow_back, color: theme.whiteColor),
                 onPressed: widget.onBack,
               ),*/
@@ -588,7 +600,8 @@ class _LoginStep2State extends State<LoginStep2> {
           TextButton(
             onPressed: widget.onResendCode, // New action goes to forget password flow
             child: Text(
-              'Didn\'t receive the code? Resend / Forgot Password',
+              // **[MODIFIED]** Removed "Forgot Password" text
+              'Didn\'t receive the code? Resend',
               style: TextStyle(color: theme.secondaryColor),
             ),
           ),
@@ -701,7 +714,7 @@ class _LoginStep3State extends State<LoginStep3> {
             children: [
               // Back button to return to Step 1
               IconButton(
-                icon: Icon(Icons.arrow_back, color: theme.whiteColor),
+                icon: Icon(Icons.arrow_back_ios, color: theme.whiteColor),
                 onPressed: widget.onBack,
               ),
               Expanded(
