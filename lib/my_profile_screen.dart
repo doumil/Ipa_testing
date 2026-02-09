@@ -168,7 +168,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> {
           onPressed: () async{
             prefs = await SharedPreferences.getInstance();
             await prefs.setString("Data", "99");
-
+            print("user data,${_currentUser.token.toString()}");
             // FIXED NAVIGATION: Pass the User object to WelcomPage
             Navigator.pushReplacement(
                 context, MaterialPageRoute(builder: (context) => WelcomPage(user: _currentUser)));

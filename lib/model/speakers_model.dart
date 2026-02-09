@@ -3,35 +3,44 @@
 import 'dart:convert';
 
 // --- Constants ---
-// NOTE: This constant is overridden by the imageBaseUrl in SpeakerApiService for network images.
 const String kDefaultSpeakerImageUrl = 'https://buzzevents.co/uploads/ICON-EMEC.png';
 
 
 // --- 1. Top-Level Data Model ---
 class SpeakersDataModel {
-  // The list of unique date strings (will be empty with the new API)
+  // The list of unique date strings (now correctly populated)
   final List<String> periods;
   final List<Speakers> speakers;
 
   SpeakersDataModel({required this.periods, required this.speakers});
 
   factory SpeakersDataModel.fromJson(Map<String, dynamic> json) {
-    // This logic is designed for the OLD API structure but is simplified
-    // to work with the flat list returned by the new API in SpeakerApiService.
-    // The SpeakerApiService will handle extracting the 'data' list.
+    // Ensure we access the 'data' object first
+    final data = json['data'] as Map<String, dynamic>?;
 
-    // Defaulting to empty lists as the new API only returns a flat array of speakers
-    // under 'data' and not the 'periods' structure.
+    if (data == null) {
+      // Handle case where 'data' is missing or null
+      return SpeakersDataModel(periods: [], speakers: []);
+    }
+
+    // Extract periods (list of strings)
+    final List<String> periodsList = (data['periods'] as List<dynamic>? ?? [])
+        .map((p) => p.toString())
+        .toList();
+
+    // Extract speakers (list of maps)
+    final List<Speakers> speakersList = (data['speakers'] as List<dynamic>? ?? [])
+        .map((speakerJson) => Speakers.fromJson(speakerJson as Map<String, dynamic>))
+        .toList();
+
     return SpeakersDataModel(
-      periods: [],
-      speakers: [], // This will be manually populated in SpeakerApiService.
+      periods: periodsList,
+      speakers: speakersList,
     );
   }
 }
 
 // --- 2. Program Session Model ---
-// This model is kept for compatibility, but the 'sessions' list in 'Speakers' will be empty
-// because the new API endpoint does not return this data.
 class ProgramSession {
   final int id;
   final String nom; // Session name
@@ -76,7 +85,7 @@ class Speakers {
   final String? biographie;   // 🎯 Made nullable
   bool isFavorite;
   final bool isRecommended;   // Defaulted to false since the new API doesn't provide it
-  final List<ProgramSession> sessions; // Will be empty list for the new API
+  final List<ProgramSession> sessions; // Now populated from the API 'programs' field
 
   Speakers({
     this.id = 0,
@@ -103,7 +112,7 @@ class Speakers {
       // Directly cast to String? as recommended for potentially null fields
       pic: json['pic'] as String?,
       biographie: json['biographie'] as String?,
-      // Sessions will be an empty list as the new API doesn't return this data
+      // Sessions are populated from the API 'programs' array
       sessions: (json['programs'] as List? ?? [])
           .map((i) => ProgramSession.fromJson(i))
           .toList(),
