@@ -1,126 +1,71 @@
-// lib/api_services/networking_api_service.dart
-
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-
-import 'package:emecexpo/model/exposant_networking_model.dart';
-import 'package:emecexpo/model/commerciaux_model.dart';
-import 'package:emecexpo/model/rdv_model.dart';
+import 'api_client.dart';
+import '../model/exposant_networking_model.dart';
+import '../model/commerciaux_model.dart';
 
 class NetworkingApiService {
-  final String _baseUrl = "https://buzzevents.co/api";
-  static const String _apiKey = '1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7';
+  static const int currentEditionId = 1149;
 
-  Map<String, String> _buildHeaders(String token) {
-    return {
-      'X-Api-Key': _apiKey,
-      'Authorization': 'Bearer $token',
-      'Accept': 'application/json',
-    };
-  }
-
-  // 💡 Helper method to safely extract a List from a JSON response
-  List<dynamic> _extractDataList(String responseBody) {
-    if (responseBody.isEmpty) {
+  /// Fetch Exhibitors
+  Future<List<ExposantNetworking>> getNetworkingExhibitors(String userToken) async {
+    try {
+      ApiClient.setAccessToken(userToken);
+      final response = await ApiClient.get('/networking/edition/$currentEditionId', requireAuth: true);
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> decodedData = json.decode(response.body);
+        if (decodedData.containsKey('exposants')) {
+          List list = decodedData['exposants'];
+          return list.map((item) => ExposantNetworking.fromJson(item)).toList();
+        }
+      }
+      return [];
+    } catch (e) {
       return [];
     }
-    final jsonResponse = json.decode(responseBody);
+  }
 
-    if (jsonResponse is List<dynamic>) {
-      // Case 1: The response is already a list (e.g., [...])
-      return jsonResponse;
-    } else if (jsonResponse is Map<String, dynamic>) {
-      // Case 2: The response is a map, possibly wrapping the list in a key like 'data'
-      if (jsonResponse.containsKey('data') && jsonResponse['data'] is List<dynamic>) {
-        return jsonResponse['data'] as List<dynamic>;
+  /// Fetch Commercials
+  Future<List<CommerciauxClass>> getCommerciaux(String userToken, int exposantId) async {
+    try {
+      ApiClient.setAccessToken(userToken);
+      final String endpoint = '/networking/edition/$currentEditionId/exposant/$exposantId';
+      final response = await ApiClient.get(endpoint, requireAuth: true);
+      if (response.statusCode == 200) {
+        final dynamic decodedData = json.decode(response.body);
+        List list = (decodedData is List) ? decodedData : (decodedData['commerciaux'] ?? []);
+        return list.map((item) => CommerciauxClass.fromJson(item)).toList();
       }
-      // If it's a Map but doesn't have a 'data' list, treat it as an error or empty
-      throw Exception('API returned a JSON object without a "data" list. Check API response structure.');
-    } else {
-      // Case 3: Unexpected format
-      throw Exception('Unexpected response format from API: Expected List or Map.');
+      throw Exception("Server Error");
+    } catch (e) {
+      throw Exception("Could not load commercials.");
     }
   }
 
-  // ------------------------------------------------------------------
-  // --- getNetworkingExhibitors (Exhibitor List) ---
-  // ------------------------------------------------------------------
-  Future<List<ExposantNetworking>> getNetworkingExhibitors(String token) async {
-    final uri = Uri.parse('$_baseUrl/networking/edition/654');
-
+  /// REAL BOOKING CALL
+  /// Body settings: creneauid, startcreneau, endcreneau
+  Future<bool> bookMeeting(String token, Creneau slot) async {
     try {
-      final response = await http.get(
-        uri,
-        headers: _buildHeaders(token),
+      ApiClient.setAccessToken(token);
+
+      final Map<String, dynamic> body = {
+        'creneauid': slot.id,
+        'startcreneau': slot.debut,
+        'endcreneau': slot.fin,
+      };
+
+      print("DEBUG: Final Booking Payload: $body");
+
+      final response = await ApiClient.post(
+        '/networking/creneau',
+        body,
+        requireAuth: true,
       );
 
-      if (response.statusCode == 200) {
-        final List<dynamic> data = _extractDataList(response.body);
-
-        return data
-            .map((json) => ExposantNetworking.fromJson(json as Map<String, dynamic>))
-            .toList();
-      } else {
-        throw Exception('Failed to load exhibitors. Status: ${response.statusCode}. Body: ${response.body}');
-      }
+      print("DEBUG: API Response Code: ${response.statusCode}");
+      return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
-      // Re-throw the specific exception or wrap it
-      if (e is Exception) rethrow;
-      throw Exception('Error fetching networking exhibitors: $e');
-    }
-  }
-
-  // ------------------------------------------------------------------
-  // --- getCommerciaux (Commercial Representatives List) ---
-  // ------------------------------------------------------------------
-  Future<List<CommerciauxClass>> getCommerciaux(String token, int exposantId) async {
-    final uri = Uri.parse('$_baseUrl/networking/edition/654/exposant/$exposantId');
-
-    try {
-      final response = await http.get(
-        uri,
-        headers: _buildHeaders(token),
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = _extractDataList(response.body);
-
-        return data
-            .map((json) => CommerciauxClass.fromJson(json as Map<String, dynamic>))
-            .toList();
-      } else {
-        throw Exception('Failed to load commerciaux. Status: ${response.statusCode}. Body: ${response.body}');
-      }
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('Error fetching commerciaux for exposant $exposantId: $e');
-    }
-  }
-
-  // ------------------------------------------------------------------
-  // --- getMyRdv (Appointment List) ---
-  // ------------------------------------------------------------------
-  Future<List<RdvClass>> getMyRdv(String token) async {
-    final uri = Uri.parse('$_baseUrl/rdv/my');
-
-    try {
-      final response = await http.get(
-        uri,
-        headers: _buildHeaders(token),
-      );
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = _extractDataList(response.body);
-
-        return data
-            .map((json) => RdvClass.fromJson(json as Map<String, dynamic>))
-            .toList();
-      } else {
-        throw Exception('Failed to load appointments. Status: ${response.statusCode}. Body: ${response.body}');
-      }
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('Error fetching appointments: $e');
+      print("DEBUG: Booking Exception: $e");
+      return false;
     }
   }
 }

@@ -1,5 +1,3 @@
-// lib/api_services/auth_api_service.dart
-
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,12 +6,13 @@ import 'package:emecexpo/model/user_model.dart';
 class AuthApiService {
   static const String _baseUrl = "https://www.buzzevents.co/api";
   static const int _editionId = 1118;
-  static const String _appMobileName = "AppMobile";
-  static const String _apiKey = '1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7'; // Placeholder
+  static const String _apiKey = '1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7';
 
-  /// API 1: Sends a verification code to the user's email (used for both Login and Forgot Password).
+  // -------------------------------------------------------------------------
+  // STEP 1: Send Verification Code to Gmail
+  // -------------------------------------------------------------------------
   Future<Map<String, dynamic>> sendVerificationCode(String email) async {
-    final Uri uri = Uri.parse('$_baseUrl/event/edition/$_editionId/sendVerificationCode/$_appMobileName');
+    final Uri uri = Uri.parse('$_baseUrl/event/edition/$_editionId/sendVerificationCode/AppMobile');
 
     try {
       final response = await http.post(
@@ -23,64 +22,32 @@ class AuthApiService {
           'Accept': 'application/json',
           'X-Api-Key': _apiKey,
         },
-        body: jsonEncode({
-          'email': email,
-        }),
+        body: jsonEncode({'email': email}),
       );
 
       final Map<String, dynamic> responseData = json.decode(response.body);
 
-      // 🎯 CORE FIX: Check both HTTP status AND JSON body status/error keys for success
-      if (response.statusCode == 200 && (responseData['status'] == 'success' || responseData['success'] == true)) {
+      if (response.statusCode == 200 && responseData['status'] == 'success') {
         return {
           'success': true,
-          'message': responseData['message'] ?? 'Verification code sent to email.',
-          'statusCode': response.statusCode,
+          'message': responseData['message'] ?? 'Code sent successfully.',
         };
       } else {
-        // This handles:
-        // 1. Non-200 HTTP status codes (e.g., 404, 500).
-        // 2. 200 HTTP status code, but JSON body contains 'status: error'
-        String errorMessage = responseData['message'] ?? 'Failed to send verification code. The email may not be registered.';
         return {
           'success': false,
-          'message': errorMessage,
-          'statusCode': response.statusCode,
+          'message': responseData['message'] ?? 'Failed to send code.',
         };
       }
-    } on http.ClientException catch (e) {
-      return {
-        'success': false,
-        'message': 'Network error: Please check your internet connection. (${e.message})',
-        'statusCode': 0,
-      };
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred while sending the code.',
-        'statusCode': -1,
-      };
+      return {'success': false, 'message': 'Network error in Step 1.'};
     }
   }
 
-  /// API 1.1: Forget Password flow - simply requests a NEW verification code.
-  /// It re-uses the existing API endpoint since the backend logic for sending
-  /// a new code to a registered email is the same.
-  Future<Map<String, dynamic>> forgetPassword(String email) async {
-    // Call the same method used for initial login/code generation.
-    final result = await sendVerificationCode(email);
-
-    // Customize the message for the user if successful
-    if (result['success'] == true) {
-      result['message'] = 'A new one-time password has been sent to your email.';
-    }
-
-    return result;
-  }
-
-  /// API 2: Verifies the code and performs login, returning user data and QR code.
+  // -------------------------------------------------------------------------
+  // STEP 2: Verify Code -> Get Small Token ($2y$12...)
+  // -------------------------------------------------------------------------
   Future<Map<String, dynamic>> verifyCode(String email, String code) async {
-    final Uri uri = Uri.parse('$_baseUrl/verifyVerificationCode/$_appMobileName');
+    final Uri uri = Uri.parse('$_baseUrl/verifyVerificationCode/AppMobile');
 
     try {
       final response = await http.post(
@@ -100,54 +67,85 @@ class AuthApiService {
       final Map<String, dynamic> responseData = json.decode(response.body);
 
       if (response.statusCode == 200 && responseData['status'] == 'success') {
-        final Map<String, dynamic> userDataMap = responseData['user'];
-        final String? authToken = userDataMap['token'];
-        final String qrCodeXml = responseData['order']['qrcode'];
+        // Extract the temporary "small" token
+        String smallToken = responseData['user']['token'];
+        // Extract QR code from the order object
+        String qrCodeXml = responseData['order'] != null ? responseData['order']['qrcode'] : "";
 
-        final User user = User.fromJson(userDataMap);
+        print("DEBUG: Step 2 Success. Small Token: $smallToken");
 
-        if (authToken != null) {
-          final SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('authToken', authToken);
-          await prefs.setString('currentUserJson', jsonEncode(userDataMap));
-          await prefs.setString('qrCodeXml', qrCodeXml);
+        // 🚀 PROCEED TO STEP 3: Exchange for Full JWT using GET
+        return await _getFinalFullToken(smallToken, responseData['user'], qrCodeXml);
+      } else {
+        return {
+          'success': false,
+          'message': responseData['message'] ?? 'Invalid code.',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Verification failed (Step 2).'};
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // STEP 3: Exchange Small Token for Full Token (JWT) via GET
+  // -------------------------------------------------------------------------
+  Future<Map<String, dynamic>> _getFinalFullToken(String smallToken, Map<String, dynamic> userMap, String qrCode) async {
+
+    // We encode the token because it contains special characters like '$' and '/'
+    final String encodedToken = Uri.encodeComponent(smallToken.trim());
+    final String url = 'https://buzzevents.co/api/login/link?tokenus=$encodedToken';
+    final Uri uri = Uri.parse(url);
+
+    try {
+      print("DEBUG: Requesting Step 3 (GET) -> $url");
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Accept': 'application/json',
+          'X-Api-Key': _apiKey,
+        },
+      );
+
+      print("DEBUG: Step 3 Response Code: ${response.statusCode}");
+      print("DEBUG: Step 3 Response Body: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> linkData = json.decode(response.body);
+
+        if (linkData.containsKey('token')) {
+          String fullJwtToken = linkData['token']; // The eyJ... token
+
+          // Replace small token with Full JWT in user object
+          userMap['token'] = fullJwtToken;
+          final User user = User.fromJson(userMap);
+
+          // Persistent Storage
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('authToken', fullJwtToken);
+          await prefs.setString('currentUserJson', jsonEncode(userMap));
+          await prefs.setString('qrCodeXml', qrCode);
 
           return {
             'success': true,
-            'message': responseData['message'] ?? 'Login successful.',
-            'token': authToken,
             'user': user,
-            'qrCodeXml': qrCodeXml,
-            'statusCode': response.statusCode,
-          };
-        } else {
-          return {
-            'success': false,
-            'message': 'Verification successful, but authentication token is missing.',
-            'statusCode': response.statusCode,
+            'token': fullJwtToken,
           };
         }
-      } else {
-        String errorMessage = responseData['message'] ?? 'Invalid verification code.';
-        return {
-          'success': false,
-          'message': errorMessage,
-          'statusCode': response.statusCode,
-        };
       }
-    } on http.ClientException catch (e) {
+
       return {
         'success': false,
-        'message': 'Network error: Please check your internet connection. (${e.message})',
-        'statusCode': 0,
+        'message': 'Full token exchange failed (Error ${response.statusCode}).',
       };
     } catch (e) {
-      print('An unexpected error occurred in AuthApiService verifyCode: $e');
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred. Please try again later.',
-        'statusCode': -1,
-      };
+      print("DEBUG: Step 3 Exception: $e");
+      return {'success': false, 'message': 'Connection error in final step.'};
     }
+  }
+
+  Future<Map<String, dynamic>> forgetPassword(String email) async {
+    return await sendVerificationCode(email);
   }
 }

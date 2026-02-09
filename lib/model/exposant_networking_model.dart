@@ -1,36 +1,32 @@
-// lib/model/exposant_networking_model.dart
-
 class ExposantNetworking {
   final int? id;
-  final String? nom;      // Maps to the Exhibitor/Company Name
-  final String? ville;    // Maps to the City
+  final String? nom;
+  final String? ville;
   final String? logo;
-  final String? activite;
-
-  // Handled correctly from the nested 'pivot' object
   final String? stand;
+  final int? compteId;
+  final String? activite;
 
   ExposantNetworking({
     this.id,
     this.nom,
     this.ville,
     this.logo,
-    this.activite,
     this.stand,
+    this.compteId,
+    this.activite,
   });
 
   factory ExposantNetworking.fromJson(Map<String, dynamic> json) {
-    // Safely extract the nested 'pivot' map, which contains the 'stand' number
-    final Map<String, dynamic>? pivotJson = json['pivot'] as Map<String, dynamic>?;
-
     return ExposantNetworking(
-      id: json['id'] as int?,
-      nom: json['nom'] as String?,
-      ville: json['ville'] as String?,
-      logo: json['logo'] as String?,
-      activite: json['activite'] as String?,
-      // Extract the 'stand' field from the 'pivot' object, using null-aware access
-      stand: pivotJson?['stand'] as String?,
+      id: json['id'],
+      nom: json['nom'],
+      ville: json['ville'],
+      logo: json['logo'],
+      activite: json['activite'],
+      compteId: json['compte_id'], // CRITICAL: Used for CommerciauxScreen
+      // Extracting stand from the nested 'pivot' object
+      stand: json['pivot'] != null ? json['pivot']['stand']?.toString() : "N/A",
     );
   }
 }

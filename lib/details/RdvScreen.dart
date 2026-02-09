@@ -33,7 +33,7 @@ class _RdvScreenState extends State<RdvScreen> {
 
   void _fetchRdv() {
     setState(() {
-      _rdvFuture = _apiService.getMyRdv(widget.authToken);
+      //_rdvFuture = _apiService.getMyRdv(widget.authToken);
     });
   }
 

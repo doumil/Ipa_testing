@@ -1,5 +1,4 @@
 // lib/main.dart
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -402,7 +401,7 @@ class _WelcomPageState extends State<WelcomPage> {
       container = const ProgramScreen();
     }
     else if (currentPage == DrawerSections.networking) {
-      container = NetworkinScreen();
+      container = NetworkinScreen(authToken: currentUser.token ?? "");
     } else if (currentPage == DrawerSections.myAgenda) {
       container = AgendaScreen();
     } else if (currentPage == DrawerSections.congress) {
@@ -452,6 +451,7 @@ class _WelcomPageState extends State<WelcomPage> {
     }
     //else if (currentPage == DrawerSections.messages) {
     //container = const ConversationsScreen();
+
     //}
     else if (currentPage == DrawerSections.meetingRatings) {
       container = const MeetingRatingsScreen();
@@ -579,7 +579,7 @@ class _WelcomPageState extends State<WelcomPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           menuItem(DrawerSections.home, "Home", Icons.home, currentSection == DrawerSections.home, onNavigate),
-          menuItem(DrawerSections.notifications, "Notifications", Icons.notifications, currentSection == DrawerSections.notifications, onNavigate),
+         // menuItem(DrawerSections.notifications, "Notifications", Icons.notifications, currentSection == DrawerSections.notifications, onNavigate),
 
           const Divider(color: Colors.white24, height: 20),
 
@@ -630,7 +630,7 @@ class _WelcomPageState extends State<WelcomPage> {
           //menuItem(DrawerSections.messages, "Messages", Icons.message_outlined, currentSection == DrawerSections.messages, onNavigate),
           menuItem(DrawerSections.myAgenda, "My Agenda", Icons.calendar_today_outlined, currentSection == DrawerSections.myAgenda, onNavigate),
           //menuItem(DrawerSections.meetingRatings, "Meeting ratings", Icons.star_border, currentSection == DrawerSections.meetingRatings, onNavigate),
-          // menuItem(DrawerSections.networking, "Networking", Icons.people_outline, currentSection == DrawerSections.networking, onNavigate),
+           menuItem(DrawerSections.networking, "Networking", Icons.people_outline, currentSection == DrawerSections.networking, onNavigate),
 
           const Divider(color: Colors.white24, height: 20),
 

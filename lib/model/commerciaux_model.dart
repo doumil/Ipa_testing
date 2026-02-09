@@ -1,40 +1,53 @@
-// lib/model/commerciaux_model.dart
+class Creneau {
+  final int id;
+  final String date;
+  final String debut;
+  final String fin;
+  final int isReserved;
+
+  Creneau({required this.id, required this.date, required this.debut, required this.fin, required this.isReserved});
+
+  factory Creneau.fromJson(Map<String, dynamic> json) {
+    return Creneau(
+      id: json['creneau_id'] ?? 0,
+      date: json['date'] ?? '',
+      debut: json['heure_debut'] ?? '',
+      fin: json['heure_fin'] ?? '',
+      isReserved: json['reserver'] ?? 0,
+    );
+  }
+}
 
 class CommerciauxClass {
   final int id;
-  final String fullName; // Assuming a name field exists
+  final String fullName;
   final String email;
   final String imagePath;
-  final String? profileDescription;
-  // This list will be populated by the third API call (schedule/creneau)
-  final List<String> availableDays;
+  final List<Creneau> availableCreneaux;
 
   CommerciauxClass({
     required this.id,
     required this.fullName,
     required this.email,
     required this.imagePath,
-    this.profileDescription,
-    this.availableDays = const [], // Default to empty list
+    required this.availableCreneaux,
   });
 
   factory CommerciauxClass.fromJson(Map<String, dynamic> json) {
-    final Map<String, dynamic> repData = json['commercial'] ?? json;
+    var list = json['calendrier']?['creneaux'] as List? ?? [];
+    List<Creneau> creneauxList = list.map((i) => Creneau.fromJson(i)).toList();
 
-    String imageUrl = repData['pic'] as String? ?? '';
-    // IMPORTANT: Prepend base URL if the image path is not already a full URL
-    if (imageUrl.isNotEmpty && !imageUrl.startsWith('http')) {
-      // Adjust this base path if necessary
-      imageUrl = 'https://buzzevents.co/storage/' + imageUrl;
-    }
+    String pic = json['pic'] as String? ?? '';
+    String fullImageUrl = (pic.isNotEmpty && !pic.startsWith('http'))
+        ? 'https://buzzevents.co/storage/$pic'
+        : pic;
 
     return CommerciauxClass(
-      id: repData['id'] as int? ?? 0,
-      fullName: repData['nom'] as String? ?? 'N/A',
-      email: repData['email'] as String? ?? '',
-      imagePath: imageUrl,
-      profileDescription: repData['biographie'] as String?,
-      // Note: days/hours are fetched by a separate API call later
+      id: json['id'] ?? 0,
+      fullName: json['name'] ?? 'N/A',
+      email: json['email'] ?? '',
+      imagePath: fullImageUrl,
+      availableCreneaux: creneauxList,
     );
   }
 }
