@@ -1,0 +1,59 @@
+name: 🎉 iOS-ipa-build
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  build-ios:
+    name: 🎉 iOS Build
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: arm64 
+
+      - name: 1. Deep Clean & Pub Get
+        run: |
+          flutter clean
+          flutter pub get
+
+      - name: 2. Reset iOS Pods
+        # هذه الخطوة تحذف أي إعدادات قديمة وترغم الماك على إعادة ربط المكتبات
+        run: |
+          cd ios
+          rm -rf Pods
+          rm -rf .symlinks
+          rm -f Podfile.lock
+          cd ..
+
+      - name: 3. Prepare iOS Configuration
+        run: flutter build ios --config-only --release --no-codesign
+
+      - name: 4. Install CocoaPods
+        run: |
+          cd ios
+          pod install --repo-update
+          cd ..
+
+      - name: 5. Final Build
+        run: flutter build ios --release --no-codesign
+
+      - name: 6. Create IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir Payload
+          cp -r Runner.app Payload/
+          zip -qq -r -9 FlutterIpaExport.ipa Payload
+          
+      - name: Upload to Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/ios/iphoneos/FlutterIpaExport.ipa
+          tag: v1.0.3
+          overwrite: true
