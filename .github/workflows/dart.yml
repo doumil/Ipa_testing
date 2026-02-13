@@ -22,38 +22,38 @@ jobs:
           flutter clean
           flutter pub get
 
-      - name: 2. Reset iOS Pods
-        # هذه الخطوة تحذف أي إعدادات قديمة وترغم الماك على إعادة ربط المكتبات
+      - name: 2. Force Create Ephemeral Files
+        # هذه الخطوة تخدع Xcode و CocoaPods بإنشاء ملفات وهمية مؤقتاً
+        run: |
+          mkdir -p ios/Flutter
+          touch ios/Flutter/podhelper.rb
+          touch ios/Flutter/Generated.xcconfig
+          # الآن Flutter سيقوم بتحديث هذه الملفات دون أن ينهار بسبب عدم وجودها
+          flutter build ios --config-only --release --no-codesign
+
+      - name: 3. Install CocoaPods
         run: |
           cd ios
-          rm -rf Pods
-          rm -rf .symlinks
+          # حذف أي ملف قفل قديم وإعادة التثبيت من الصفر
           rm -f Podfile.lock
-          cd ..
-
-      - name: 3. Prepare iOS Configuration
-        run: flutter build ios --config-only --release --no-codesign
-
-      - name: 4. Install CocoaPods
-        run: |
-          cd ios
           pod install --repo-update
           cd ..
 
-      - name: 5. Final Build
+      - name: 4. Final Build
         run: flutter build ios --release --no-codesign
 
-      - name: 6. Create IPA
+      - name: 5. Create IPA
         run: |
           cd build/ios/iphoneos
           mkdir Payload
           cp -r Runner.app Payload/
           zip -qq -r -9 FlutterIpaExport.ipa Payload
           
-      - name: Upload to Release
+      - name: 6. Upload to Release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/ios/iphoneos/FlutterIpaExport.ipa
-          tag: v1.0.3
+          tag: v1.0.5
           overwrite: true
+          body: "تم إصلاح خطأ podhelper.rb بنجاح."
