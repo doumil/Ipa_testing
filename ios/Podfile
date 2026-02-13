@@ -1,27 +1,24 @@
 platform :ios, '14.0'
 
 # Standard Flutter helpers
-# We use 'if File.exist?' to prevent the crash you saw earlier
-helper_path = File.join(File.dirname(File.expand_path(__FILE__)), '..', 'Flutter', 'podhelper.rb')
-if File.exist?(helper_path)
-  load helper_path
-end
+load File.join(File.dirname(File.expand_path(__FILE__)), '..', 'Flutter', 'podhelper.rb')
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  if respond_to?(:flutter_install_all_ios_pods)
-    flutter_install_all_ios_pods File.dirname(File.expand_path(__FILE__))
-  end
+  flutter_install_all_ios_pods File.dirname(File.expand_path(__FILE__))
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target) if respond_to?(:flutter_additional_ios_build_settings)
+    flutter_additional_ios_build_settings(target)
+
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
       config.build_settings['ENABLE_BITCODE'] = 'NO'
+      # Helps avoid 'Module not found' issues with Swift plugins
+      config.build_settings['SWIFT_VERSION'] = '5.0'
     end
   end
 end
