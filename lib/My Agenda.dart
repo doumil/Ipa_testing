@@ -28,7 +28,7 @@ class AgendaScreen extends StatefulWidget {
 class _AgendaScreenState extends State<AgendaScreen> {
   final ProgramApiService _apiService = ProgramApiService();
   final AgendaLocalService _localService = AgendaLocalService();
-  final GoogleCalendarService _calendarService = GoogleCalendarService();
+  //final GoogleCalendarService _calendarService = GoogleCalendarService();
 
   ProgramDataModel? _programData;
   Set<String> _savedItemIds = {};
@@ -642,7 +642,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                   // Add to Google Calendar Button
                   GestureDetector(
                     onTap: () {
-                      _calendarService.createCalendarEvent(context, item);
+                      //_calendarService.createCalendarEvent(context, item);
                     },
                     child: const Padding(
                       padding: EdgeInsets.only(left: 8.0, top: 4.0),

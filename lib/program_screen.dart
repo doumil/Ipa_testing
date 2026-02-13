@@ -32,7 +32,7 @@ class _ProgramScreenState extends State<ProgramScreen> {
   // 💡 Initialization remains correct
   final ProgramApiService _apiService = ProgramApiService();
   final AgendaLocalService _agendaLocalService = AgendaLocalService();
-  final GoogleCalendarService _calendarService = GoogleCalendarService();
+  //final GoogleCalendarService _calendarService = GoogleCalendarService();
 
   ProgramDataModel? _programData;
 

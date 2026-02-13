@@ -73,7 +73,7 @@ dependencies:
   #firebase_auth: any
   path_provider: any
   #firebase_messaging: any
-  add_2_calendar: any
+  #add_2_calendar: any
   change_app_package_name:
   googleapis: any
   animated_splash_screen: any
