@@ -1,24 +1,34 @@
 platform :ios, '14.0'
 
-# We force the load because the Workflow will generate this file first
 flutter_helper = File.join(File.dirname(File.expand_path(__FILE__)), '..', 'Flutter', 'podhelper.rb')
-load flutter_helper
+
+# الطريقة الصحيحة: حاول تحميل الملف، وإذا فشل (لأنه في مرحلة الـ Config) لا توقف العملية
+if File.exist?(flutter_helper)
+  load flutter_helper
+else
+  puts "Warning: podhelper.rb not found yet. This is normal during initial config."
+end
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  # This MUST run to install app_badge_plus and others
-  flutter_install_all_ios_pods File.dirname(File.expand_path(__FILE__))
+  # لا يتم الاستدعاء إلا إذا تم تحميل الملف بنجاح
+  if defined?(flutter_install_all_ios_pods)
+    flutter_install_all_ios_pods File.dirname(File.expand_path(__FILE__))
+  end
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
+    # حماية إضافية لتجنب خطأ undefined method
+    if defined?(flutter_additional_ios_build_settings)
+      flutter_additional_ios_build_settings(target)
+    end
+    
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
       config.build_settings['ENABLE_BITCODE'] = 'NO'
-      # Important for newer plugins
       config.build_settings['SWIFT_VERSION'] = '5.0'
     end
   end
