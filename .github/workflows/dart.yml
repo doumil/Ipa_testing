@@ -1,0 +1,59 @@
+name: 🎉 iOS-ipa-build
+
+on:
+  workflow_dispatch: 
+
+jobs:
+  build-ios:
+    name: 🎉 iOS Build
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: arm64 
+
+      - name: 1. Deep Clean & Pub Get
+        run: |
+          flutter clean
+          flutter pub get
+
+      - name: 2. Force Create Ephemeral Files
+        # هذه الخطوة تخدع Xcode و CocoaPods بإنشاء ملفات وهمية مؤقتاً
+        run: |
+          mkdir -p ios/Flutter
+          touch ios/Flutter/podhelper.rb
+          touch ios/Flutter/Generated.xcconfig
+          # الآن Flutter سيقوم بتحديث هذه الملفات دون أن ينهار بسبب عدم وجودها
+          flutter build ios --config-only --release --no-codesign
+
+      - name: 3. Install CocoaPods
+        run: |
+          cd ios
+          # حذف أي ملف قفل قديم وإعادة التثبيت من الصفر
+          rm -f Podfile.lock
+          pod install --repo-update
+          cd ..
+
+      - name: 4. Final Build
+        run: flutter build ios --release --no-codesign
+
+      - name: 5. Create IPA
+        run: |
+          cd build/ios/iphoneos
+          mkdir Payload
+          cp -r Runner.app Payload/
+          zip -qq -r -9 FlutterIpaExport.ipa Payload
+          
+      - name: 6. Upload to Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/ios/iphoneos/FlutterIpaExport.ipa
+          tag: v1.0.5
+          overwrite: true
+          body: "تم إصلاح خطأ podhelper.rb بنجاح."
